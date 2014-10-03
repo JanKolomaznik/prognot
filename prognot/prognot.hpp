@@ -19,7 +19,8 @@ struct CancelException : std::exception, boost::exception {};
 
 typedef boost::rational<int> Progress;
 
-class AProgressNotifierImpl {
+class AProgressNotifierImpl
+{
 public:
 
 	virtual bool
@@ -31,6 +32,14 @@ public:
 	virtual void
 	onFinished() {}
 protected:
+};
+
+class DummyProgressNotifier
+	: public AProgressNotifierImpl
+{
+public:
+	bool onIncrement(Progress /*progress*/) override
+	{ return true; };
 };
 
 class ProgressNotifier
@@ -87,10 +96,10 @@ public:
 	{}*/
 
 	ProgressNotifier(DummyProgressNotifier aDummyProgressNotifier)
-		: mInfo_(std::make_shared<NotifierInfo>(std::move(aDummyProgressNotifier)))
-		, mProgress_range_(1, 1)
-		, mStep_count_(-1)
-		, mCurrent_level_(0)
+		: mInfo(std::make_shared<NotifierInfo>(std::move(aDummyProgressNotifier)))
+		, mProgressRange(1, 1)
+		, mStepCount(-1)
+		, mCurrentLevel(0)
 	{}
 
 	ProgressNotifier(AProgressNotifierImpl *aImplementation)
@@ -101,7 +110,7 @@ public:
 	{}
 
 	~ProgressNotifier() {
-		EYEN_ASSERT(mAssignedStepCount <= mStepCount);
+		PROGNOT_ASSERT(mAssignedStepCount <= mStepCount);
 		if (!std::uncaught_exception() && mAssignedStepCount < mStepCount) {
 			try {
 				increment(mStepCount - mAssignedStepCount);
@@ -214,19 +223,19 @@ class InputIteratorProgressNotifierAdaptor :
 {
 public:
 	static const int64_t cStepCount = 100;
-	InputIteratorProgressNotifierAdaptor() :
-		InputIteratorProgressNotifierAdaptor::iterator_adaptor_(TIterator()),
-		mPosition(-1)
+	InputIteratorProgressNotifierAdaptor()
+		: InputIteratorProgressNotifierAdaptor::iterator_adaptor_(TIterator())
+		, mPosition(-1)
 	{}
 
-	explicit InputIteratorProgressNotifierAdaptor(TIterator aIt, ProgressNotifier aProgressNotifier, int64_t aRangeSize) :
-		InputIteratorProgressNotifierAdaptor::iterator_adaptor_(aIt),
-		mPosition(0),
-		mRangeSize(aRangeSize),
-		mProgressNotifier(std::make_shared<ProgressNotifier>(std::move(aProgressNotifier)))
+	explicit InputIteratorProgressNotifierAdaptor(TIterator aIt, ProgressNotifier aProgressNotifier, int64_t aRangeSize)
+		: InputIteratorProgressNotifierAdaptor::iterator_adaptor_(aIt)
+		, mPosition(0)
+		, mRangeSize(aRangeSize)
+		, mProgressNotifier(std::make_shared<ProgressNotifier>(std::move(aProgressNotifier)))
 	{
 		mStepSize = (mRangeSize + cStepCount - 1)/ cStepCount;
-		mProgressNotifier->SetStepCount(cStepCount);
+		mProgressNotifier->setStepCount(cStepCount);
 	}
 
 private:

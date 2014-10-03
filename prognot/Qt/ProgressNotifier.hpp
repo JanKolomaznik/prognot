@@ -28,7 +28,7 @@ public:
 	onStarted() override
 	{
 		mShouldContinue = true;
-		emit started;
+		emit started();
 	}
 
 	void
