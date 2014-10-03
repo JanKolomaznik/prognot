@@ -12,8 +12,7 @@ class ProgressBarStack : public QWidget
 	Q_OBJECT;
 public:
 	ProgressBarStack(QWidget *parent = nullptr);
-	ProgressNotifier *
-	createProgressNotifier();
+	QtProgressNotifier *createProgressNotifier();
 protected:
 	QVBoxLayout *mLayout;
 };
@@ -24,7 +23,7 @@ class StackedProgressBar : public QWidget
 public:
 	StackedProgressBar(QWidget *parent = nullptr);
 
-	ProgressNotifier *
+	QtProgressNotifier *
 	createProgressNotifier();
 public slots:
 	void

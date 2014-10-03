@@ -110,6 +110,10 @@ public:
 	{}
 
 	~ProgressNotifier() {
+		// If we moved from this instance do nothing
+		if (!mInfo || mStepCount < 0) {
+			return;
+		}
 		PROGNOT_ASSERT(mAssignedStepCount <= mStepCount);
 		if (!std::uncaught_exception() && mAssignedStepCount < mStepCount) {
 			try {

@@ -7,7 +7,9 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 # Instruct CMake to run moc automatically when needed.
 set(CMAKE_AUTOMOC ON)
 
-set(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 ")
+set(Boost_USE_STATIC_LIBS   ON)
+set(Boost_USE_MULTITHREADED ON)
 find_package(Boost)
 
 
@@ -16,26 +18,31 @@ find_package(Qt5Widgets)
 
 set(${PROJECT_NAME}_INCLUDE_DIR "../")
 
-set(${PROJECT_NAME}_INCLUDES
-	${${PROJECT_NAME}_INCLUDE_DIR}/prognot/prognot.hpp
-	${${PROJECT_NAME}_INCLUDE_DIR}/prognot/Qt/ProgressNotifier.hpp
-	${${PROJECT_NAME}_INCLUDE_DIR}/prognot/Qt/ProgressBar.hpp
-	${${PROJECT_NAME}_INCLUDE_DIR}/prognot/Qt/StackedProgressBar.hpp
-	)
-
-set(${PROJECT_NAME}_SOURCES
-	"StackedProgressBar.cpp"
-	#${${PROJECT_NAME}_BINARY_DIR}/prognot_automoc.cpp
-	)
-
-message("${${PROJECT_NAME}_BINARY_DIR}/prognot_automoc.cpp")
 include_directories(
 	${${PROJECT_NAME}_BINARY_DIR}
 	${Boost_INCLUDE_DIR}
 	"../"
 	)
 
-add_library(${PROJECT_NAME} ${${PROJECT_NAME}_SOURCES} ${${PROJECT_NAME}_INCLUDES} ${${PROJECT_NAME}_INCLUDES})
+set(${PROJECT_NAME}_INCLUDES
+	${${PROJECT_NAME}_INCLUDE_DIR}/prognot/prognot.hpp
+	${${PROJECT_NAME}_INCLUDE_DIR}/prognot/Qt/ProgressNotifier.hpp
+	${${PROJECT_NAME}_INCLUDE_DIR}/prognot/Qt/ProgressBar.hpp
+	${${PROJECT_NAME}_INCLUDE_DIR}/prognot/Qt/StackedProgressBar.hpp
+	${${PROJECT_NAME}_INCLUDE_DIR}/prognot/Qt/ProgressDialog.hpp
+	)
+
+set(${PROJECT_NAME}_SOURCES
+	"StackedProgressBar.cpp"
+	"ProgressDialog.cpp"
+	)
+
+qt5_wrap_ui(${PROJECT_NAME}_UIS
+	"ProgressDialog.ui"
+	)
+
+add_library(${PROJECT_NAME} STATIC ${${PROJECT_NAME}_SOURCES} ${${PROJECT_NAME}_INCLUDES} ${${PROJECT_NAME}_UIS})
+set_target_properties(${PROJECT_NAME} PROPERTIES DEBUG_POSTFIX _d )
 
 # Use the Widgets module from Qt 5.
 qt5_use_modules(${PROJECT_NAME} Widgets)

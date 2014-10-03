@@ -17,19 +17,19 @@ public:
 
 		QObject::connect(
 			&mProgressNotifier,
-			&ProgressNotifier::incremented,
+			&QtProgressNotifier::incremented,
 			this,
 			&QProgressBar::setValue,
 			Qt::QueuedConnection);
 	}
 
-	ProgressNotifier *
+	QtProgressNotifier *
 	progressNotifier()
 	{
 		return &mProgressNotifier;
 	}
 protected:
-	qt::ProgressNotifier mProgressNotifier;
+	qt::QtProgressNotifier mProgressNotifier;
 };
 
 } // namespace qt

@@ -6,13 +6,13 @@
 namespace prognot {
 namespace qt {
 
-class ProgressNotifier
+class QtProgressNotifier
 	: public QObject
 	, public AProgressNotifierImpl
 {
 	Q_OBJECT;
 public:
-	explicit ProgressNotifier(QObject *parent = nullptr)
+	explicit QtProgressNotifier(QObject *parent = nullptr)
 		: QObject(parent)
 		, mShouldContinue(true)
 	{}

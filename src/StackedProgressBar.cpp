@@ -15,7 +15,7 @@ ProgressBarStack::ProgressBarStack(QWidget *parent)
 	setLayout(mLayout);
 }
 
-ProgressNotifier *
+QtProgressNotifier *
 ProgressBarStack::createProgressNotifier() {
 	auto progressBar = new ProgressBar();
 	mLayout->addWidget(progressBar);
@@ -47,7 +47,7 @@ StackedProgressBar::StackedProgressBar(QWidget *parent)
 	setMouseTracking(true);
 }
 
-ProgressNotifier *
+QtProgressNotifier *
 StackedProgressBar::createProgressNotifier()
 {
 	return mProgressBarStack->createProgressNotifier();
