@@ -1,81 +1,32 @@
+#include <prognot/Qt/ProgressBar.hpp>
 #include <QApplication>
-
-#include <QWidget>
 #include <QPushButton>
 #include <QVBoxLayout>
-
-#include <thread>
 #include <chrono>
-
-#include "prognot/prognot.hpp"
-#include "prognot/Qt/ProgressBar.hpp"
-
-void computation(prognot::ProgressNotifier aNotifier)
-{
-	aNotifier.setStepCount(50);
-	for (int i = 0; i < 50; ++i) {
-		std::this_thread::sleep_for (std::chrono::milliseconds(100));
-		aNotifier.increment();
-	}
-}
-
-
-class MainWindow : public QWidget
-{
-public:
-	explicit MainWindow(QWidget *parent = nullptr)
-		: QWidget(parent)
-	{
-		auto *layout = new QVBoxLayout();
-		mProgressBar = new prognot::qt::ProgressBar();
-		layout->addWidget(mProgressBar);
-
-		mStartButton = new QPushButton();
-		mStartButton->setText("Start");
-		layout->addWidget(mStartButton);
-
-		mCancelButton = new QPushButton();
-		mCancelButton->setText("Cancel");
-		layout->addWidget(mCancelButton);
-
-		setLayout(layout);
-
-		QObject::connect(
-			mStartButton,
-			&QPushButton::clicked,
-			this,
-			&MainWindow::run);
-
-		QObject::connect(
-			mCancelButton,
-			&QPushButton::clicked,
-			mProgressBar->progressNotifier(),
-			&prognot::qt::ProgressNotifier::cancel);
-	}
-
-	void run()
-	{
-		mThread = std::thread([this]() {
-			try {
-				computation(mProgressBar->progressNotifier());
-			} catch (prognot::CancelException &) {
-
-			}
-		});
-		mThread.detach();
-	}
-
-	prognot::qt::ProgressBar *mProgressBar;
-	QPushButton *mStartButton;
-	QPushButton *mCancelButton;
-	std::thread mThread;
-};
-
-int
-main(int argc, char *argv[]) {
-	QApplication app(argc, argv);
-
-	MainWindow win;
-	win.show();
-	return app.exec();
+#include <thread>
+int main(int argc, char** argv) {
+    QApplication app(argc, argv);
+    QWidget window;
+    auto* layout = new QVBoxLayout(&window);
+    auto* bar = new prognot::qt::ProgressBar(&window);
+    auto* start = new QPushButton("Start", &window);
+    auto* cancel = new QPushButton("Cancel", &window);
+    layout->addWidget(bar); layout->addWidget(start); layout->addWidget(cancel);
+    std::jthread worker;
+    QObject::connect(cancel, &QPushButton::clicked, bar->progressNotifier(), &prognot::qt::QtProgressNotifier::cancel);
+    QObject::connect(start, &QPushButton::clicked, &window, [&] {
+        start->setEnabled(false);
+        worker = std::jthread([](std::stop_token stop, prognot::ProgressNotifier notifier) {
+            try {
+                notifier.setStepCount(50);
+                for (int i = 0; i < 50; ++i) {
+                    if (stop.stop_requested()) notifier.cancel();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                    notifier.increment();
+                }
+            } catch (const prognot::CancelException&) {}
+        }, bar->makeNotifier());
+    });
+    window.show();
+    return app.exec(); // worker requests stop and joins before window destruction
 }

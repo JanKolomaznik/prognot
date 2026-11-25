@@ -1,90 +1,63 @@
 #include <prognot/Qt/StackedProgressBar.hpp>
-
+#include <QEnterEvent>
 #include <QResizeEvent>
-
-namespace prognot {
-namespace qt {
-
-ProgressBarStack::ProgressBarStack(QWidget *parent)
-	: QWidget(parent)
-{
-	setWindowFlags(Qt::Popup | Qt::FramelessWindowHint);
-	//setWindowFlags(Qt::FramelessWindowHint);
-
-	mLayout = new QVBoxLayout();
-	setLayout(mLayout);
+namespace prognot::qt {
+ProgressBarStack::ProgressBarStack(QWidget* parent) : QWidget(parent), layout_(new QVBoxLayout(this)) {
+    setWindowFlags(Qt::Popup | Qt::FramelessWindowHint);
 }
-
-QtProgressNotifier *
-ProgressBarStack::createProgressNotifier() {
-	auto progressBar = new ProgressBar();
-	mLayout->addWidget(progressBar);
-
-	QObject::connect(progressBar, &ProgressBar::valueChanged, static_cast<StackedProgressBar *>(parent()), &StackedProgressBar::updateProgress );
-	//QObject::connect(progressBar, &ProgressBar::finished, [this, progressBar]
-	return progressBar->progressNotifier();
+QtProgressNotifier* ProgressBarStack::createProgressNotifier() {
+    auto* bar = new ProgressBar(this);
+    layout_->addWidget(bar);
+    return bar->progressNotifier();
 }
-
-//---------------------------------------------------------
-
-StackedProgressBar::StackedProgressBar(QWidget *parent)
-	: QWidget(parent)
-{
-	auto *layout = new QVBoxLayout();
-
-	mProgressBar = new QProgressBar();
-	mProgressBar->setMinimum(0);
-	mProgressBar->setMaximum(1000);
-
-	layout->addWidget(mProgressBar);
-
-	setLayout(layout);
-
-	mProgressBarStack = new ProgressBarStack(this);
-	//mProgressBarStack->resize(200, 200);
-	mProgressBarStack->hide();
-
-	setMouseTracking(true);
+void ProgressBarStack::clear() {
+    while (auto* item = layout_->takeAt(0)) { delete item->widget(); delete item; }
 }
-
-QtProgressNotifier *
-StackedProgressBar::createProgressNotifier()
-{
-	return mProgressBarStack->createProgressNotifier();
-	/*mProgressNotifiers.emplace_back();
-	return &mProgressNotifiers.back();*/
+StackedProgressBar::StackedProgressBar(QWidget* parent) : QWidget(parent),
+    bar_(new QProgressBar(this)), stack_(new ProgressBarStack(this)) {
+    auto* layout = new QVBoxLayout(this);
+    bar_->setRange(0, 100); bar_->setValue(0);
+    layout->addWidget(bar_);
+    connect(bar_, &QProgressBar::valueChanged, this, &StackedProgressBar::valueChanged);
+    stack_->hide();
 }
-
-void
-StackedProgressBar::updateProgress()
-{}
-
-void
-StackedProgressBar::showSubtaskWindow(bool aShow)
-{
-	if (aShow) {
-		auto corner = mProgressBar->pos();
-		corner.setY(corner.y() - mProgressBarStack->height());
-		mProgressBarStack->move(mapToGlobal(corner));
-		mProgressBarStack->show();
-	} else {
-		mProgressBarStack->hide();
-	}
+QtProgressNotifier* StackedProgressBar::createProgressNotifier(std::int64_t weight) {
+    if (weight <= 0) throw std::invalid_argument("Task weight must be positive");
+    auto* notifier = stack_->createProgressNotifier();
+    const auto index = tasks_.size();
+    tasks_.push_back({notifier, weight, Progress(0)});
+    connect(notifier, &QtProgressNotifier::progressChanged, this, [this, index](Progress value) {
+        tasks_[index].progress = std::move(value);
+        updateProgress();
+    });
+    updateProgress();
+    return notifier;
 }
-
-void
-StackedProgressBar::enterEvent(QEvent * event)
-{
-	showSubtaskWindow();
-	QWidget::enterEvent(event);
+ProgressNotifier StackedProgressBar::makeNotifier(std::int64_t weight) {
+    return createProgressNotifier(weight)->makeNotifier();
 }
-
-void
-StackedProgressBar::resizeEvent(QResizeEvent *event)
-{
-	mProgressBarStack->setMinimumWidth(event->size().width());
-	QWidget::resizeEvent(event);
+Progress StackedProgressBar::progress() const {
+    Progress sum(0);
+    boost::multiprecision::cpp_int weights = 0;
+    for (const auto& task : tasks_) { sum += task.progress * task.weight; weights += task.weight; }
+    return weights == 0 ? Progress(0) : sum / weights;
 }
-
-} // namespace qt
-} // namespace prognot
+int StackedProgressBar::value() const noexcept { return bar_->value(); }
+void StackedProgressBar::updateProgress() {
+    const auto total = progress();
+    bar_->setValue(((total.numerator() * 100) / total.denominator()).convert_to<int>());
+}
+void StackedProgressBar::cancel() { for (auto& task : tasks_) task.notifier->cancel(); }
+void StackedProgressBar::clear() { tasks_.clear(); stack_->clear(); bar_->setValue(0); }
+void StackedProgressBar::showSubtaskWindow(bool show) {
+    if (show) {
+        stack_->adjustSize();
+        stack_->move(bar_->mapToGlobal(QPoint(0, -stack_->height())));
+    }
+    stack_->setVisible(show);
+}
+void StackedProgressBar::enterEvent(QEnterEvent* event) { showSubtaskWindow(); QWidget::enterEvent(event); }
+void StackedProgressBar::resizeEvent(QResizeEvent* event) {
+    stack_->setMinimumWidth(event->size().width()); QWidget::resizeEvent(event);
+}
+} // namespace prognot::qt

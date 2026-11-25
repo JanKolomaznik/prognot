@@ -161,8 +161,8 @@ iterator supports it. `operator->` is available for lvalue references.
 ## Migration from the 2014 prototype
 
 - Requires C++20, CMake 3.28+, and Boost 1.85+.
-- The core target is header-only `prognot::prognot`; Qt is neither required nor
-  included in the build/install graph. Historical Qt sources are not yet ported.
+- The core target is header-only `prognot::prognot`; Qt is optional through
+  `PROGNOT_BUILD_QT` and the `prognot::qt` target. See [Qt integration](qt.md).
 - `Progress` no longer uses fixed-width `int`. Code inspecting numerator or
   denominator types may need changes; display conversions still use Rational.
 - `CancelException` now derives only from `std::exception`, not Boost.Exception.

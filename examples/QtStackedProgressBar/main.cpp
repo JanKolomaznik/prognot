@@ -1,76 +1,38 @@
+#include <prognot/Qt/StackedProgressBar.hpp>
 #include <QApplication>
-
-#include <QWidget>
 #include <QPushButton>
 #include <QSpinBox>
 #include <QVBoxLayout>
-
-#include <thread>
 #include <chrono>
-
-#include "prognot/prognot.hpp"
-#include "prognot/Qt/StackedProgressBar.hpp"
-
-void computation(int seconds, prognot::ProgressNotifier aNotifier)
-{
-	aNotifier.setStepCount(50);
-	for (int i = 0; i < 50; ++i) {
-		std::this_thread::sleep_for (std::chrono::milliseconds(seconds * 1000 / 50));
-		aNotifier.increment();
-	}
-}
-
-
-class MainWindow : public QWidget
-{
-public:
-	explicit MainWindow(QWidget *parent = nullptr)
-		: QWidget(parent)
-	{
-		auto *layout = new QVBoxLayout();
-		mStackedProgressBar = new prognot::qt::StackedProgressBar();
-		layout->addWidget(mStackedProgressBar);
-
-		mStartButton = new QPushButton();
-		mStartButton->setText("Start");
-		layout->addWidget(mStartButton);
-
-		mSpinBox = new QSpinBox();
-		mSpinBox->setValue(8);
-		layout->addWidget(mSpinBox);
-		setLayout(layout);
-
-		QObject::connect(
-			mStartButton,
-			&QPushButton::clicked,
-			this,
-			&MainWindow::run);
-	}
-
-	void run()
-	{
-		auto progressNotifier = mStackedProgressBar->createProgressNotifier();
-		mThread = std::thread([this, progressNotifier]() {
-			try {
-				computation(this->mSpinBox->value(), progressNotifier);
-			} catch (prognot::CancelException &) {
-
-			}
-		});
-		mThread.detach();
-	}
-
-	prognot::qt::StackedProgressBar *mStackedProgressBar;
-	QPushButton *mStartButton;
-	QSpinBox *mSpinBox;
-	std::thread mThread;
-};
-
-int
-main(int argc, char *argv[]) {
-	QApplication app(argc, argv);
-
-	MainWindow win;
-	win.show();
-	return app.exec();
+#include <thread>
+#include <vector>
+int main(int argc, char** argv) {
+    QApplication app(argc, argv);
+    QWidget window;
+    auto* layout = new QVBoxLayout(&window);
+    auto* stack = new prognot::qt::StackedProgressBar(&window);
+    auto* seconds = new QSpinBox(&window); seconds->setRange(1, 60); seconds->setValue(5);
+    auto* start = new QPushButton("Add task (weight = seconds)", &window);
+    auto* cancel = new QPushButton("Cancel all", &window);
+    layout->addWidget(stack); layout->addWidget(seconds); layout->addWidget(start); layout->addWidget(cancel);
+    std::vector<std::jthread> workers;
+    QObject::connect(cancel, &QPushButton::clicked, stack, &prognot::qt::StackedProgressBar::cancel);
+    QObject::connect(start, &QPushButton::clicked, &window, [&] {
+        const auto duration = seconds->value(); // read widgets only on GUI thread
+        auto handle = stack->makeNotifier(duration);
+        workers.emplace_back([duration, handle = std::move(handle)](std::stop_token stop) mutable {
+            try {
+                handle.setStepCount(100);
+                for (int i = 0; i < 100; ++i) {
+                    if (stop.stop_requested()) handle.cancel();
+                    std::this_thread::sleep_for(std::chrono::milliseconds(duration * 10));
+                    handle.increment();
+                }
+            } catch (const prognot::CancelException&) {}
+        });
+    });
+    window.show();
+    const auto result = app.exec();
+    for (auto& worker : workers) worker.request_stop();
+    return result;
 }

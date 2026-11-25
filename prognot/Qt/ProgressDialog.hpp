@@ -1,33 +1,31 @@
 #pragma once
-
+/** @file ProgressDialog.hpp @brief Cancelable operation dialog for Qt 6. */
 #include <QDialog>
-#include <prognot/Qt/ProgressNotifier.hpp>
-
-namespace Ui {
-	class ProgressDialog;
-}
-
-namespace prognot {
-namespace qt {
-
-class ProgressDialog : public QDialog
-{
-	Q_OBJECT
-
+#include <prognot/Qt/ProgressBar.hpp>
+class QLabel;
+namespace prognot::qt {
+/**
+ * @brief Single-operation dialog; accepts only successful operations.
+ * All other outcomes reject it. Cancel, Escape, and closing request cooperative
+ * cancellation and reject immediately; workers are never synchronously awaited.
+ */
+class ProgressDialog : public QDialog {
+    Q_OBJECT
 public:
-	explicit ProgressDialog(QWidget *parent = nullptr);
-
-	~ProgressDialog();
-
-	void
-	setText(const QString &text);
-
-	QtProgressNotifier *
-	progressNotifier() const;
-protected:
-	std::unique_ptr<Ui::ProgressDialog> mUi;
+    /** @brief Construct a dialog. @param parent Widget owner. */
+    explicit ProgressDialog(QWidget* parent = nullptr);
+    /** @brief Change operation description. @param text Displayed description. */
+    void setText(const QString& text);
+    /** @return Borrowed adapter, valid until dialog destruction. */
+    QtProgressNotifier* progressNotifier() const noexcept;
+    /** @return Owned core handle. @throws std::logic_error If already started. */
+    [[nodiscard]] ProgressNotifier makeNotifier();
+public slots:
+    /** @brief Request cancellation and reject; also handles Escape and window close. */
+    void reject() override;
+private:
+    bool rejected_ = false;
+    QLabel* label_;
+    ProgressBar* bar_;
 };
-
-} // namespace qt
-}  // namespace prognot
-
+} // namespace prognot::qt

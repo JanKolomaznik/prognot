@@ -32,9 +32,24 @@ target_link_libraries(my_app PRIVATE prognot::prognot)
 
 The target propagates C++20, Boost headers, and the platform thread dependency.
 
+## Optional Qt 6 integration
+
+Qt 6.5+ Widgets is required only when `PROGNOT_BUILD_QT=ON` (tested with 6.10.2):
+
+```sh
+cmake -S . -B build-qt -DPROGNOT_BUILD_QT=ON -DPROGNOT_BUILD_EXAMPLES=ON
+cmake --build build-qt
+ctest --test-dir build-qt --output-on-failure
+```
+
+Link `prognot::qt` for the adapter, progress bar, cancelable dialog, and weighted
+multi-task widget. Qt tests use Boost.Test and run with the offscreen platform.
+Core-only builds remain free of Qt dependencies. Examples use joined `std::jthread`
+workers, without accessing widgets from worker threads.
+
 ## Generated API reference
 
-The public core interface is documented with Doxygen comments. With Doxygen
+The public core and Qt interfaces are documented with Doxygen comments. With Doxygen
 installed (verified with 1.15.0), generate the HTML reference from the repository root:
 
 ```sh
@@ -43,7 +58,7 @@ doxygen Doxyfile
 ```
 
 Open `build/doxygen/html/index.html`. Documentation warnings are treated as errors.
-The configuration covers the core only; deferred Qt interfaces are excluded.
+The configuration covers both the core and Qt 6 interfaces.
 
 ## Simple callbacks
 
@@ -94,7 +109,7 @@ scope exit completes a configured task's remaining unallocated steps as a fallba
 Unwinding and cancellation do not report synthetic completion.
 
 See [the API contract](docs/api.md) for lifetime, cancellation, threading, iterator,
-and migration rules. The historical Qt sources and examples are retained for a
-later milestone; they are not built or installed by this core-only release.
+and migration rules. See [Qt integration](docs/qt.md) for widgets, aggregation,
+and safe worker lifetimes.
 
 No project license has been selected yet; this milestone does not assign one.
