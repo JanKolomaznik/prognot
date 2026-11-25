@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.28)
+project(prognot_gallery LANGUAGES CXX)
+set(BUILD_TESTING OFF CACHE BOOL "" FORCE)
+set(PROGNOT_BUILD_QT ON CACHE BOOL "" FORCE)
+set(PROGNOT_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+add_subdirectory(../.. prognot EXCLUDE_FROM_ALL)
+add_executable(capture capture.cpp)
+target_link_libraries(capture PRIVATE prognot::qt)

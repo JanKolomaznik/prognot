@@ -1,16 +1,94 @@
 # prognot
 
-A C++20 header-only library for exact, weighted progress reporting and
-cooperative cancellation. Algorithms report progress independently of their UI.
-Nested tasks share one operation, progress total, and cancellation source.
+**Composable progress reporting for C++20, with optional Qt 6 widgets.**
+
+Give an algorithm a progress handle, split its work into weighted subtasks, and
+report to a callback or a Qt widget. The algorithm stays independent of its UI.
+The core is header-only; Qt is an optional compiled adapter.
+
+## Why prognot?
+
+- **Progress that composes.** A parent assigns a share of its work to a child;
+  the child divides that share into its own steps without knowing the parent's scale.
+- **Exact weighted totals.** Rational arithmetic with arbitrary-precision integers
+  avoids cumulative rounding errors and overflow in deeply nested task weights.
+- **Cooperative cancellation across the task tree.** Children share cancellation;
+  C++20 stop tokens and sources connect reporting to the rest of your application.
+- **Parallel work, ordered updates.** Independent task handles can report from
+  separate threads; the core serializes callbacks and preserves progress order.
+- **Useful lifecycle semantics.** Explicit completion and scope-based fallback,
+  with distinct success, cancellation, failure, and abandonment outcomes.
+- **A small integration surface.** Use a concept-constrained lambda for simple
+  reporting or an observer for lifecycle events. Add Qt only when you need it.
+
+## Quick start
+
+```cpp
+#include <prognot/prognot.hpp>
+#include <iostream>
+
+int main() {
+    auto task = prognot::makeProgressNotifier([](const prognot::Progress& value) {
+        std::cout << boost::rational_cast<double>(value) * 100 << "%\n";
+        return true; // Return false to request cancellation.
+    });
+
+    task.setStepCount(10);
+    task.increment(2); // 20%
+    {
+        auto loading = task.subTaskNotifier(3); // Reserve 30% of the whole job.
+        loading.setStepCount(100);
+        loading.increment(50); // Overall: 35%.
+        loading.finish();      // Overall: 50%.
+    }
+    task.finish(); // Complete the remaining unallocated work: 100%.
+}
+```
+
+Call `finish()` explicitly to observe callback exceptions. Normal scope exit also
+completes a configured task's unallocated remainder; cancellation and exception
+unwinding do not synthesize completion. Completing a parent never completes its
+children's reserved work.
+
+## Qt widget gallery
+
+Short, looping captures of the actual Qt 6 widgets, using the Fusion style.
+The same core progress handles drive all three; application algorithms do not
+need Qt dependencies.
+
+### ProgressBar
+
+A single operation, from zero to completion. Updates reported by workers are
+delivered on the GUI thread.
+
+![Qt ProgressBar advancing from 0 to 100 percent](docs/images/progress-bar.gif)
+
+### ProgressDialog
+
+A description, progress indicator, and Cancel button. Cancel, Escape, and window
+close request cooperative cancellation; only a successful operation accepts the dialog.
+
+![Qt ProgressDialog showing an operation advancing with a Cancel button](docs/images/progress-dialog.gif)
+
+### StackedProgressBar
+
+Three independent operations with weights **1 : 2 : 3**. The popup shows each
+operation; the lower bar shows their exact weighted mean. Completed tasks keep
+their contribution until the group is cleared.
+
+![Three task bars progressing at different speeds above their weighted aggregate](docs/images/stacked-progress.gif)
+
+[Qt usage and threading rules](docs/qt.md) · [Regenerating the gallery](docs/gallery/README.md)
 
 ## Requirements and build
 
-- C++20 compiler and standard library (including `std::stop_token`).
-- CMake 3.28 or newer.
-- Boost 1.85 or newer, with its CMake package installed; tested with Boost 1.90.
-  Only headers are used: Rational and Multiprecision in the core, and
-  Boost.Test (included runner) in unit tests. No compiled Boost.Test library is required.
+- C++20 compiler and standard library, including `std::stop_token`.
+- CMake **3.28+**.
+- Boost **1.85+**, with its CMake package installed; tested with **1.90**.
+- Optional: Qt **6.5+** Widgets; tested with **6.10.2**.
+
+The core uses Boost.Rational and Boost.Multiprecision headers. Unit tests use
+Boost.Test's included runner, without a separate compiled test library.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
@@ -19,11 +97,11 @@ ctest --test-dir build --output-on-failure
 cmake --install build --prefix /your/install/prefix
 ```
 
-Use `-DBoost_DIR=/path/to/lib/cmake/Boost-1.xx.0` to select a Boost installation
-when several versions are available. Dependencies are never downloaded implicitly.
-Use `-DBUILD_TESTING=OFF` to build/install only the library.
+Use `-DBUILD_TESTING=OFF` to omit tests. When several Boost versions are installed,
+select one with `-DBoost_DIR=/path/to/lib/cmake/Boost-1.xx.0`. Dependencies are never
+downloaded implicitly.
 
-Consumers can use `add_subdirectory()` or an installed package:
+Consumers can use `add_subdirectory()` or the installed package:
 
 ```cmake
 find_package(prognot 0.2 CONFIG REQUIRED)
@@ -32,9 +110,7 @@ target_link_libraries(my_app PRIVATE prognot::prognot)
 
 The target propagates C++20, Boost headers, and the platform thread dependency.
 
-## Optional Qt 6 integration
-
-Qt 6.5+ Widgets is required only when `PROGNOT_BUILD_QT=ON` (tested with 6.10.2):
+### Build the Qt widgets and examples
 
 ```sh
 cmake -S . -B build-qt -DPROGNOT_BUILD_QT=ON -DPROGNOT_BUILD_EXAMPLES=ON
@@ -42,15 +118,22 @@ cmake --build build-qt
 ctest --test-dir build-qt --output-on-failure
 ```
 
-Link `prognot::qt` for the adapter, progress bar, cancelable dialog, and weighted
-multi-task widget. Qt tests use Boost.Test and run with the offscreen platform.
-Core-only builds remain free of Qt dependencies. Examples use joined `std::jthread`
-workers, without accessing widgets from worker threads.
+Link **`prognot::qt`** for the adapter, bar, dialog, and stacked widget. Core-only
+builds require no Qt installation. Qt tests run with the offscreen platform;
+the examples use joined `std::jthread` workers and keep widget access on the GUI thread.
 
-## Generated API reference
+Each Qt adapter serves one operation. Create a handle with `makeNotifier()` on
+the GUI thread and move it to a worker. See the [Qt integration guide](docs/qt.md)
+for cancellation, widget lifetime, and aggregation rules.
 
-The public core and Qt interfaces are documented with Doxygen comments. With Doxygen
-installed (verified with 1.15.0), generate the HTML reference from the repository root:
+## Documentation
+
+- [Core API contract](docs/api.md): budgets, ownership, callbacks, cancellation,
+  concurrency, iterator adaptation, and migration from the original API.
+- [Qt integration](docs/qt.md): worker setup, signals, dialogs, and weighted groups.
+- Doxygen comments cover the complete public core and Qt interfaces.
+
+Generate the HTML API reference with Doxygen (verified with 1.15.0):
 
 ```sh
 mkdir -p build
@@ -58,58 +141,7 @@ doxygen Doxyfile
 ```
 
 Open `build/doxygen/html/index.html`. Documentation warnings are treated as errors.
-The configuration covers both the core and Qt 6 interfaces.
 
-## Simple callbacks
+## License
 
-```cpp
-auto progress = prognot::makeProgressNotifier([](const prognot::Progress& value) {
-    // Report value; return false to request cancellation.
-    return true;
-});
-progress.setStepCount(10);
-progress.increment();
-progress.finish();
-```
-
-The `ProgressCallback` concept checks the callable signature at compile time.
-Use the virtual implementation interface below for lifecycle notifications.
-
-## Weighted subtasks
-
-```cpp
-#include <prognot/prognot.hpp>
-#include <iostream>
-#include <memory>
-
-struct Console : prognot::AProgressNotifierImpl {
-    bool onIncrement(prognot::Progress value) override {
-        std::cout << boost::rational_cast<double>(value) * 100 << "%\n";
-        return true; // false requests cancellation
-    }
-};
-
-int main() {
-    auto output = std::make_shared<Console>();
-    prognot::ProgressNotifier operation(output);
-    operation.setStepCount(10);
-    operation.increment(2); // 20%
-    {
-        auto loading = operation.subTaskNotifier(3); // reserves 30%
-        loading.setStepCount(100);
-        loading.increment(50); // total: 35%
-        loading.finish();      // total: 50%
-    }
-    operation.finish();        // total: 100%
-}
-```
-
-Call `finish()` explicitly when callback exceptions must be observable. Ordinary
-scope exit completes a configured task's remaining unallocated steps as a fallback.
-Unwinding and cancellation do not report synthetic completion.
-
-See [the API contract](docs/api.md) for lifetime, cancellation, threading, iterator,
-and migration rules. See [Qt integration](docs/qt.md) for widgets, aggregation,
-and safe worker lifetimes.
-
-No project license has been selected yet; this milestone does not assign one.
+A project license has not yet been selected.
