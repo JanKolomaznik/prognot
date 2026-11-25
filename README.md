@@ -1,10 +1,9 @@
-# prognot
+![prognot — weighted progress tracks branching into subtasks and merging into one total](docs/images/prognot-banner.png)
 
 [![Core](https://github.com/JanKolomaznik/prognot/actions/workflows/core.yml/badge.svg?branch=master&event=push)](https://github.com/JanKolomaznik/prognot/actions/workflows/core.yml)
 [![Qt](https://github.com/JanKolomaznik/prognot/actions/workflows/qt.yml/badge.svg?branch=master&event=push)](https://github.com/JanKolomaznik/prognot/actions/workflows/qt.yml)
 [![Doxygen](https://github.com/JanKolomaznik/prognot/actions/workflows/doxygen.yml/badge.svg?branch=master&event=push)](https://github.com/JanKolomaznik/prognot/actions/workflows/doxygen.yml)
 
-![prognot — weighted progress tracks branching into subtasks and merging into one total](docs/images/prognot-banner.png)
 
 **Composable progress reporting for C++20, with optional Qt 6 widgets.**
 
@@ -171,4 +170,9 @@ Open `build/doxygen/html/index.html`. Documentation warnings are treated as erro
 
 ## License
 
-A project license has not yet been selected.
+Licensed under the [MIT License](LICENSE).
+Copyright (c) 2014–2026 Jan Kolomaznik.
+
+The license is installed with both core-only and Qt-enabled packages at
+`${CMAKE_INSTALL_DATADIR}/licenses/prognot/LICENSE` (normally
+`share/licenses/prognot/LICENSE`). Dependencies retain their own licenses.

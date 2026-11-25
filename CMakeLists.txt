@@ -55,6 +55,7 @@ endif()
 
 include(CMakePackageConfigHelpers)
 install(TARGETS prognot EXPORT prognotTargets)
+install(FILES LICENSE DESTINATION ${CMAKE_INSTALL_DATADIR}/licenses/prognot)
 install(FILES prognot/prognot.hpp DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/prognot)
 install(EXPORT prognotTargets NAMESPACE prognot:: DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/prognot)
 configure_package_config_file(cmake/prognotConfig.cmake.in
