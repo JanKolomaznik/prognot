@@ -1,0 +1,67 @@
+name: Doxygen
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: doxygen-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  documentation:
+    name: Generate API documentation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Install Doxygen 1.15.0
+        working-directory: ${{ runner.temp }}
+        run: |
+          curl --fail --location --retry 3 \
+            https://github.com/doxygen/doxygen/releases/download/Release_1_15_0/doxygen-1.15.0.linux.bin.tar.gz \
+            --output doxygen.tar.gz
+          echo '0ec2e5b2c3cd82b7106d19cb42d8466450730b8cb7a9e85af712be38bf4523a1  doxygen.tar.gz' | sha256sum --check
+          tar -xzf doxygen.tar.gz
+          echo "$RUNNER_TEMP/doxygen-1.15.0/bin" >> "$GITHUB_PATH"
+      - name: Generate documentation (warnings are errors)
+        run: |
+          doxygen --version
+          mkdir -p build
+          doxygen Doxyfile
+          test -s build/doxygen/html/index.html
+      - name: Upload HTML reference
+        uses: actions/upload-artifact@v7
+        with:
+          name: doxygen-html
+          path: build/doxygen/html/
+          if-no-files-found: error
+          retention-days: 14
+      - name: Package GitHub Pages site
+        if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: build/doxygen/html/
+  deploy:
+    name: Publish API reference
+    needs: documentation
+    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    concurrency:
+      group: github-pages
+      cancel-in-progress: false
+    steps:
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Deploy API reference
+        id: deployment
+        uses: actions/deploy-pages@v4

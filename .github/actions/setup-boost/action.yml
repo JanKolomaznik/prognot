@@ -1,0 +1,30 @@
+name: Set up Boost
+description: Install and cache Boost 1.90 headers and CMake package on Linux.
+runs:
+  using: composite
+  steps:
+    - name: Restore Boost installation
+      id: cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ runner.temp }}/boost-install
+        key: boost-1.90.0-${{ runner.os }}-${{ runner.arch }}-gcc-v1
+    - name: Install Boost 1.90.0
+      if: steps.cache.outputs.cache-hit != 'true'
+      shell: bash
+      working-directory: ${{ runner.temp }}
+      run: |
+        set -euo pipefail
+        curl --fail --location --retry 3 \
+          https://archives.boost.io/release/1.90.0/source/boost_1_90_0.tar.bz2 \
+          --output boost.tar.bz2
+        echo '49551aff3b22cbc5c5a9ed3dbc92f0e23ea50a0f7325b0d198b705e8ee3fc305  boost.tar.bz2' | sha256sum --check
+        tar -xjf boost.tar.bz2
+        cd boost_1_90_0
+        ./bootstrap.sh --with-libraries=test
+        # b2 installs the official CMake package as well as the complete headers.
+        ./b2 --with-test variant=release link=static threading=multi \
+          --prefix="$RUNNER_TEMP/boost-install" -j2 install
+    - name: Select installed Boost
+      shell: bash
+      run: echo "Boost_ROOT=$RUNNER_TEMP/boost-install" >> "$GITHUB_ENV"

@@ -1,0 +1,45 @@
+name: Core
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: core-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  test:
+    name: Core / ${{ matrix.build_type }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        build_type: [Debug, Release]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: ./.github/actions/setup-boost
+      - name: Configure without Qt
+        run: >-
+          cmake -S . -B build
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DBUILD_TESTING=ON -DPROGNOT_BUILD_QT=OFF
+          -DPROGNOT_BUILD_EXAMPLES=OFF
+      - name: Build
+        run: cmake --build build --parallel 2
+      - name: Test
+        run: ctest --test-dir build --output-on-failure --output-junit test-results.xml
+      - name: Install
+        run: cmake --install build --prefix "$RUNNER_TEMP/prognot-install"
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: core-tests-${{ matrix.build_type }}
+          path: |
+            build/test-results.xml
+            build/Testing/Temporary/LastTest.log
+          retention-days: 14

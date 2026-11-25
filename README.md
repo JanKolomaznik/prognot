@@ -1,5 +1,11 @@
 # prognot
 
+[![Core](https://github.com/JanKolomaznik/prognot/actions/workflows/core.yml/badge.svg?branch=master&event=push)](https://github.com/JanKolomaznik/prognot/actions/workflows/core.yml)
+[![Qt](https://github.com/JanKolomaznik/prognot/actions/workflows/qt.yml/badge.svg?branch=master&event=push)](https://github.com/JanKolomaznik/prognot/actions/workflows/qt.yml)
+[![Doxygen](https://github.com/JanKolomaznik/prognot/actions/workflows/doxygen.yml/badge.svg?branch=master&event=push)](https://github.com/JanKolomaznik/prognot/actions/workflows/doxygen.yml)
+
+![prognot — weighted progress tracks branching into subtasks and merging into one total](docs/images/prognot-banner.png)
+
 **Composable progress reporting for C++20, with optional Qt 6 widgets.**
 
 Give an algorithm a progress handle, split its work into weighted subtasks, and
@@ -126,7 +132,28 @@ Each Qt adapter serves one operation. Create a handle with `makeNotifier()` on
 the GUI thread and move it to a worker. See the [Qt integration guide](docs/qt.md)
 for cancellation, widget lifetime, and aggregation rules.
 
+## Continuous integration
+
+GitHub Actions checks every push and pull request, with manual runs available:
+
+- **Core:** build, test, and install without Qt, in Debug and Release.
+- **Qt:** build the library and examples, test core and widgets offscreen, and
+  install, in Debug and Release with Qt 6.8.3.
+- **Doxygen:** generate the complete API reference with warnings treated as errors,
+  then publish successful builds from `master` to GitHub Pages.
+
+The badges above show the latest push results on `master`. Open a badge for run
+logs; test reports and generated HTML are available as workflow artifacts for
+14 days. CI uses Boost 1.90.0 and Doxygen 1.15.0.
+
+The [online API reference](https://jankolomaznik.github.io/prognot/) is updated
+from `master`; pull requests validate documentation without deploying it.
+For the first deployment, select **GitHub Actions** under the repository's
+**Settings → Pages → Build and deployment → Source**.
+
 ## Documentation
+
+[Read the online API reference](https://jankolomaznik.github.io/prognot/).
 
 - [Core API contract](docs/api.md): budgets, ownership, callbacks, cancellation,
   concurrency, iterator adaptation, and migration from the original API.
