@@ -22,11 +22,10 @@ if(BUILD_TESTING)
     if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
         target_compile_options(prognot_tests PRIVATE -Wall -Wextra -Wpedantic)
     endif()
-    foreach(case IN ITEMS "batch and scope" "hierarchy" "validation" "moves and lifetime"
-            "cancellation and failures" "iterators" "concurrent children" "deep arithmetic"
-            "callback contract" "early iterator exit")
-        string(REPLACE " " "_" test_name "${case}")
-        add_test(NAME prognot.${test_name} COMMAND prognot_tests "${case}")
+    foreach(case IN ITEMS batch_and_scope hierarchy validation moves_and_lifetime
+            cancellation_and_failures iterators concurrent_children deep_arithmetic
+            callback_contract early_iterator_exit constrained_callbacks)
+        add_test(NAME prognot.${case} COMMAND prognot_tests --run_test=${case})
     endforeach()
 endif()
 

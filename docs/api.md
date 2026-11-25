@@ -45,6 +45,34 @@ the handle; moved-from handles may only be destroyed or assigned to. Move
 assignment first closes the old task using the same rules as destruction.
 Self-move assignment leaves the task unchanged.
 
+## Concept-constrained callbacks
+
+For progress-only reporting, `makeProgressNotifier(callback)` owns a copy of an
+lvalue callback or moves an rvalue callback into the shared operation state:
+
+```cpp
+auto notifier = prognot::makeProgressNotifier([](const prognot::Progress& value) {
+    // Display or record value.
+    return true;
+});
+notifier.setStepCount(10);
+notifier.increment();
+notifier.finish();
+```
+
+The public `ProgressCallback<T>` concept requires a callable invocable as `T&`
+with a `Progress` argument and returning exactly `bool`. A `void` or integer
+return is rejected at compile time, avoiding ambiguous cancellation semantics.
+The factory additionally requires that its decayed callback type can be
+constructed from the supplied argument. Mutable and move-only lambdas and
+function pointers are supported; a move-only lvalue must be explicitly moved.
+The callable is owned, but references captured by a lambda remain borrowed.
+
+Callback return values, exceptions, serialization, and threading follow the same
+rules as `onIncrement()`. Use `AProgressNotifierImpl` when lifecycle callbacks are
+needed. Concepts constrain type-level requirements only; positive step counts,
+remaining budgets, and lifetime rules still require runtime validation.
+
 ## Scope exit and operation outcome
 
 Normal destruction of a configured open handle calls `finish()`. An unconfigured
@@ -126,6 +154,9 @@ released. Early ordinary destruction fills the unvisited remainder, following
 the same scope-completion policy as other handles; it does not prove that every
 element was processed. Cancellation or exception unwinding suppresses that fill.
 Notifications are per element, without the previous fixed 100-step rounding.
+The adaptor uses standard C++20 iterator concepts and traits, without Boost.Iterator.
+It exposes dereference, pre/post increment, `base()`, and equality when the underlying
+iterator supports it. `operator->` is available for lvalue references.
 
 ## Migration from the 2014 prototype
 

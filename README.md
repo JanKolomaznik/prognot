@@ -9,7 +9,8 @@ Nested tasks share one operation, progress total, and cancellation source.
 - C++20 compiler and standard library (including `std::stop_token`).
 - CMake 3.28 or newer.
 - Boost 1.85 or newer, with its CMake package installed; tested with Boost 1.90.
-  Only headers are used: Rational, Multiprecision, and Iterator.
+  Only headers are used: Rational and Multiprecision in the core, and
+  Boost.Test (included runner) in unit tests. No compiled Boost.Test library is required.
 
 ```sh
 cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
@@ -30,6 +31,34 @@ target_link_libraries(my_app PRIVATE prognot::prognot)
 ```
 
 The target propagates C++20, Boost headers, and the platform thread dependency.
+
+## Generated API reference
+
+The public core interface is documented with Doxygen comments. With Doxygen
+installed (verified with 1.15.0), generate the HTML reference from the repository root:
+
+```sh
+mkdir -p build
+doxygen Doxyfile
+```
+
+Open `build/doxygen/html/index.html`. Documentation warnings are treated as errors.
+The configuration covers the core only; deferred Qt interfaces are excluded.
+
+## Simple callbacks
+
+```cpp
+auto progress = prognot::makeProgressNotifier([](const prognot::Progress& value) {
+    // Report value; return false to request cancellation.
+    return true;
+});
+progress.setStepCount(10);
+progress.increment();
+progress.finish();
+```
+
+The `ProgressCallback` concept checks the callable signature at compile time.
+Use the virtual implementation interface below for lifecycle notifications.
 
 ## Weighted subtasks
 
