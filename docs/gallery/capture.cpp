@@ -1,6 +1,8 @@
 // Deterministic captures of real widgets, not hand-drawn progress bars.
 #include <prognot/Qt/ProgressDialog.hpp>
 #include <prognot/Qt/StackedProgressBar.hpp>
+#include <prognot/Qt/PopupProgressBar.hpp>
+#include <QMouseEvent>
 #include <QApplication>
 #include <QDir>
 #include <QEvent>
@@ -101,4 +103,33 @@ int main(int argc, char** argv) {
             frame(directory, "stacked-progress", i, "StackedProgressBar", "Three independent tasks. Weights 1 : 2 : 3.", group, popup);
         }
     }
+    {
+        PopupProgressBar group; group.setFixedSize(520, 60);
+        group.setPopupDirection(PopupProgressBar::PopupDirection::Up);
+        group.show();
+        auto first = group.makeNotifier(1); auto second = group.makeNotifier(2);
+        first.setStepCount(100); second.setStepCount(100);
+        ProgressBarStack* popup = nullptr;
+        for (auto* child : group.children())
+            if (auto* candidate = dynamic_cast<ProgressBarStack*>(child)) popup = candidate;
+        if (!popup) return 4;
+        int oldA = 0, oldB = 0;
+        for (int i = 0; i < frames; ++i) {
+            const int a = std::clamp((i-5)*3, 0, 100);
+            const int b = std::clamp((i-5)*2, 0, 100);
+            if (a > oldA) first.increment(a-oldA);
+            if (b > oldB) second.increment(b-oldB);
+            oldA = a; oldB = b; drain();
+            if (i == 12) {
+                QMouseEvent click(QEvent::MouseButtonPress, QPointF(5, 5),
+                                  QPointF(group.mapToGlobal(QPoint(5, 5))),
+                                  Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+                QApplication::sendEvent(&group, &click); drain();
+            }
+            frame(directory, "popup-progress", i, "PopupProgressBar",
+                  "Click to open details. Configurable direction and hover activation.",
+                  group, group.isSubtaskWindowVisible() ? popup : nullptr);
+        }
+    }
+
 }

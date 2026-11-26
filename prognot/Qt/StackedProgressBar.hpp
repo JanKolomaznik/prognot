@@ -49,7 +49,7 @@ public slots:
     /** @brief Recompute aggregate from the latest delivered exact fractions. */
     void updateProgress();
     /** @brief Toggle per-task popup. @param show Whether to show it. */
-    void showSubtaskWindow(bool show = true);
+    virtual void showSubtaskWindow(bool show = true);
     /** @brief Request cancellation of all registered operations. */
     void cancel();
     /** @brief Cancel work, discard bars and reset aggregate to zero. */
@@ -65,7 +65,10 @@ protected:
 private:
     struct Task { QtProgressNotifier* notifier; std::int64_t weight; Progress progress{0}; };
     std::vector<Task> tasks_;
+protected:
+    /** @brief Aggregate display for specialized popup widgets. */
     QProgressBar* bar_;
+    /** @brief Owned per-operation popup. */
     ProgressBarStack* stack_;
 };
 } // namespace prognot::qt

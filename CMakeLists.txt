@@ -38,7 +38,8 @@ if(PROGNOT_BUILD_QT)
         target_link_libraries(prognot_qt_tests PRIVATE prognot::qt)
         foreach(case IN ITEMS worker_delivery_and_lifecycle exact_weighted_aggregation
                 cancellation_and_clear widget_destruction_during_work dialog_outcomes_and_buttons
-                nested_core_tasks receiver_deleted_from_signal clear_with_pending_events)
+                nested_core_tasks receiver_deleted_from_signal clear_with_pending_events
+                popup_interaction_and_placement)
             add_test(NAME prognot.qt.${case} COMMAND prognot_qt_tests --run_test=${case})
             set_tests_properties(prognot.qt.${case} PROPERTIES
                 ENVIRONMENT "QT_QPA_PLATFORM=offscreen" TIMEOUT 30)

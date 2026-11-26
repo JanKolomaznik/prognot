@@ -17,9 +17,9 @@ python3 docs/gallery/generate.py
 ```
 
 The script builds a capture program in a temporary directory, drives the real
-widgets through core progress handles, saves frames, and encodes three GIFs into
+widgets through core progress handles, saves frames, and encodes four GIFs into
 `docs/images/`. It does not record the desktop, require a display server, or use
-an image-generation model. The stacked capture composites the widget and its
+an image-generation model. The stacked and popup captures composite the widget and its
 separate popup onto one canvas so both appear in the README.
 
 Each loop lasts 6.4 seconds at 10 frames per second, including short pauses at

@@ -22,7 +22,7 @@ with tempfile.TemporaryDirectory(prefix='prognot-gallery-') as temporary:
     run('cmake', '--build', str(build), '--target', 'capture', '-j2')
     environment = dict(os.environ, QT_QPA_PLATFORM='offscreen', QT_SCALE_FACTOR='1')
     run(str(build / 'capture'), str(frames), env=environment)
-    for scene in ('progress-bar', 'progress-dialog', 'stacked-progress'):
+    for scene in ('progress-bar', 'progress-dialog', 'stacked-progress', 'popup-progress'):
         run('ffmpeg', '-hide_banner', '-loglevel', 'error', '-y',
             '-framerate', '10', '-i', str(frames / (scene + '-%03d.png')),
             '-filter_complex',

@@ -2,6 +2,11 @@
 #include <boost/test/included/unit_test.hpp>
 #include <prognot/Qt/ProgressDialog.hpp>
 #include <prognot/Qt/StackedProgressBar.hpp>
+#include <prognot/Qt/PopupProgressBar.hpp>
+#include <QEnterEvent>
+#include <QMouseEvent>
+#include <QKeyEvent>
+#include <QScreen>
 #include <QApplication>
 #include <QDialogButtonBox>
 #include <QPushButton>
@@ -156,4 +161,50 @@ BOOST_AUTO_TEST_CASE(clear_with_pending_events) {
     drain(); BOOST_CHECK(stack.progress() == Progress(1,4));
     BOOST_CHECK_EQUAL(stack.value(), 25);
     BOOST_CHECK(old.stopToken().stop_requested());
+}
+
+BOOST_AUTO_TEST_CASE(popup_interaction_and_placement) {
+    PopupProgressBar group;
+    group.resize(140, 50); group.move(300, 300); group.show(); drain();
+    auto task = group.makeNotifier(); task.setStepCount(4); task.increment(); drain();
+    BOOST_CHECK_EQUAL(group.value(), 25);
+    QEnterEvent enter(QPointF(1, 1), QPointF(1, 1), QPointF(301, 301));
+    QApplication::sendEvent(&group, &enter);
+    BOOST_CHECK(!group.isSubtaskWindowVisible());
+    auto* bar = group.findChild<QProgressBar*>(); BOOST_REQUIRE(bar);
+    QMouseEvent click(QEvent::MouseButtonPress, QPointF(1, 1),
+                      QPointF(bar->mapToGlobal(QPoint(1, 1))),
+                      Qt::LeftButton, Qt::LeftButton, Qt::NoModifier);
+    QApplication::sendEvent(bar, &click);
+    BOOST_CHECK(group.isSubtaskWindowVisible());
+    QApplication::sendEvent(bar, &click);
+    BOOST_CHECK(!group.isSubtaskWindowVisible());
+    group.setPopupTrigger(PopupProgressBar::PopupTrigger::Hover);
+    QApplication::sendEvent(&group, &enter);
+    BOOST_CHECK(group.isSubtaskWindowVisible());
+    ProgressBarStack* popup = nullptr;
+    for (auto* child : group.children())
+        if (auto* candidate = dynamic_cast<ProgressBarStack*>(child)) popup = candidate;
+    BOOST_REQUIRE(popup);
+    const QRect anchor(bar->mapToGlobal(QPoint(0, 0)), bar->size());
+    using Direction = PopupProgressBar::PopupDirection;
+    for (auto direction : {Direction::Up, Direction::Down, Direction::Left, Direction::Right}) {
+        group.setPopupDirection(direction);
+        BOOST_CHECK(group.popupDirection() == direction);
+        if (direction == Direction::Up) BOOST_CHECK_EQUAL(popup->geometry().bottom(), anchor.top()-1);
+        if (direction == Direction::Down) BOOST_CHECK_EQUAL(popup->y(), anchor.bottom()+1);
+        if (direction == Direction::Left) BOOST_CHECK_EQUAL(popup->geometry().right(), anchor.left()-1);
+        if (direction == Direction::Right) BOOST_CHECK_EQUAL(popup->x(), anchor.right()+1);
+    }
+    QKeyEvent escape(QEvent::KeyPress, Qt::Key_Escape, Qt::NoModifier);
+    QApplication::sendEvent(popup, &escape);
+    BOOST_CHECK(!group.isSubtaskWindowVisible());
+    group.move(-20, -20); group.showSubtaskWindow();
+    BOOST_CHECK(group.screen()->availableGeometry().contains(popup->geometry()));
+    group.setPopupTrigger(PopupProgressBar::PopupTrigger::Click);
+    BOOST_CHECK(!group.isSubtaskWindowVisible());
+    group.showSubtaskWindow(); group.hide();
+    BOOST_CHECK(!group.isSubtaskWindowVisible());
+    group.clear(); BOOST_CHECK(task.stopToken().stop_requested());
+    BOOST_CHECK_EQUAL(group.value(), 0);
 }

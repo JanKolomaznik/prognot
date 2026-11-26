@@ -58,7 +58,7 @@ children's reserved work.
 ## Qt widget gallery
 
 Short, looping captures of the actual Qt 6 widgets, using the Fusion style.
-The same core progress handles drive all three; application algorithms do not
+The same core progress handles drive all four; application algorithms do not
 need Qt dependencies.
 
 ### ProgressBar
@@ -82,6 +82,13 @@ operation; the lower bar shows their exact weighted mean. Completed tasks keep
 their contribution until the group is cleared.
 
 ![Three task bars progressing at different speeds above their weighted aggregate](docs/images/stacked-progress.gif)
+
+### PopupProgressBar
+
+A weighted group with details opened by click or hover, positioned above, below,
+to the left, or to the right of the aggregate. The capture opens details by click.
+
+![PopupProgressBar opening two task bars on click](docs/images/popup-progress.gif)
 
 [Qt usage and threading rules](docs/qt.md) · [Regenerating the gallery](docs/gallery/README.md)
 
@@ -123,7 +130,7 @@ cmake --build build-qt
 ctest --test-dir build-qt --output-on-failure
 ```
 
-Link **`prognot::qt`** for the adapter, bar, dialog, and stacked widget. Core-only
+Link **`prognot::qt`** for the adapter, bar, dialog, stacked widget, and configurable popup widget. Core-only
 builds require no Qt installation. Qt tests run with the offscreen platform;
 the examples use joined `std::jthread` workers and keep widget access on the GUI thread.
 

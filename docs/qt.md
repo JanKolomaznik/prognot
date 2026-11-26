@@ -109,3 +109,27 @@ without starting it, allowing signal connections before `makeNotifier()`.
 Direct deletion of borrowed adapters or child bars is unsupported; use `clear()`
 or destroy the owner. `ProgressBarStack` is the lower-level popup container and
 can also be used independently.
+
+## Configurable popup
+
+`PopupProgressBar` inherits the weighted task API and ownership rules of
+`StackedProgressBar`. It defaults to left-click activation and downward placement:
+
+```cpp
+#include <prognot/Qt/PopupProgressBar.hpp>
+using prognot::qt::PopupProgressBar;
+PopupProgressBar group;
+group.setPopupDirection(PopupProgressBar::PopupDirection::Right);
+group.setPopupTrigger(PopupProgressBar::PopupTrigger::Hover);
+auto loading = group.makeNotifier(1);
+auto processing = group.makeNotifier(3);
+```
+
+Directions are `Up`, `Down`, `Left`, and `Right`. Placement is clamped to the
+screen's available geometry. `Click` toggles details with the left mouse button;
+`Hover` opens them on pointer entry and leaves them available for inspection.
+Escape or clicking outside dismisses the Qt popup. Changing the trigger hides
+an open popup. `showSubtaskWindow(bool)` works with either trigger, and
+`isSubtaskWindowVisible()` reports its current visibility. Hiding the owner also
+hides details. These are views of registered independent operations; nested core
+handles still contribute through their root and do not create extra UI rows.
